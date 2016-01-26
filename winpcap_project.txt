@@ -1,0 +1,9 @@
+Setting Up Winpcap Project
+
+C/C++
+add. include dir.    C:\Users\michael\Documents\Visual Studio 2015\WpdPack\Include;%(AdditionalIncludeDirectories)
+PreprocessorDefinitions   WIN32;_DEBUG;WPCAP;HAVE_REMOTE;_CONSOLE;
+
+Linker
+add. dependencies   C:\Users\michael\Documents\Visual Studio 2015\WpdPack\Lib\wpcap.lib;C:\Users\michael\Documents\Visual Studio 2015\WpdPack\Lib\Packet.lib;
+add. lib. dir.   C:\Users\michael\Documents\Visual Studio 2015\WpdPack\Include;
