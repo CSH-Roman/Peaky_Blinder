@@ -7,6 +7,7 @@
 #include <IPHlpApi.h>
 #include <stdio.h>
 #include <iostream>
+#include <string>
 
 #pragma comment(lib, "WS2_32.lib")
 
@@ -22,7 +23,10 @@ public:
 	void resolve(addrinfo **info);
 	void createNbind(addrinfo **info);
 	void startlistening();
+	void accept_connections();
 	void endclient();
+	int send_msg(std::string msg);
+	int receive(std::string msg);
 };
 
 Socks::Socks() {
@@ -91,10 +95,43 @@ void Socks::startlistening() {
 	}
 }
 
+//accept connections on server
+void Socks::accept_connections() {
+	ClientSocket = INVALID_SOCKET;
+	ClientSocket = accept(ListenSocket, NULL, NULL);
+	if (ClientSocket == INVALID_SOCKET) {
+		printf("accept failed: %d\n", WSAGetLastError());
+		closesocket(ListenSocket);
+		WSACleanup();
+		exit(6);
+	}
+}
+
 //close socket
 void Socks::endclient() {
 	closesocket(ClientSocket);
 	WSACleanup();
+}
+
+//send a message to the client
+int Socks::send_msg(std::string msg) {
+	int result = 0;
+	result = send(ClientSocket, msg.c_str(), msg.length(), 0);
+	if (result == SOCKET_ERROR) {
+		printf("send failed: %d\n", WSAGetLastError());
+		closesocket(ClientSocket);
+		WSACleanup();
+		return 7;
+	}
+
+	return 0;
+}
+
+//receive message from client
+int Socks::receive(std::string msg) {
+	int result = 0;
+	//result = recv(ClientSocket, msg.c_str(), msg.length(), 0);
+	return 0;
 }
 
 int main()
@@ -107,7 +144,13 @@ int main()
 	serv_sock.resolve(&info_ptr);
 	serv_sock.createNbind(&info_ptr);
 	freeaddrinfo(info_ptr);
-
+	serv_sock.startlistening();
+	serv_sock.accept_connections();
+	std::string msg = "";
+	std::cout << "Enter Command: ";
+	std::cin >> msg;
+	serv_sock.send_msg(msg);
+	//serv_sock.accept_connections();
     return 0;
 }
 
