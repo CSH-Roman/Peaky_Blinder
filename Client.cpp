@@ -3,12 +3,13 @@
 
 //libraries
 #include "stdafx.h"
-#include "pcap.h"
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
 #include <IPHlpApi.h>
 #include <stdio.h>
+#include <string>
+#include <iostream>
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Mswsock.lib")
@@ -18,7 +19,7 @@ class Socks {
 protected:
 	WSADATA wsaData;
 	SOCKET ConnectSocket;
-	
+
 public:
 	Socks();
 	~Socks();
@@ -47,10 +48,10 @@ Socks::Socks() {
 
 	if (mySocket == INVALID_SOCKET)
 	{
-		printf("Socket Initialization: Error creating socket");
-		system("pause");
-		WSACleanup();
-		exit(11);
+	printf("Socket Initialization: Error creating socket");
+	system("pause");
+	WSACleanup();
+	exit(11);
 	}
 
 	myBackup = mySocket;*/
@@ -111,6 +112,17 @@ int Socks::sendData() {
 
 //send data
 int Socks::recvData() {
+	int result = 0;
+	char recvbuf[512];
+
+	result = recv(ConnectSocket, recvbuf, 512, 0);
+	if (result > 0)
+		std::cout << recvbuf << std::endl;
+	else if (result == 0)
+		printf("Connection closed\n");
+	else
+		printf("recv failed: %d\n", WSAGetLastError());
+
 	return 0;
 }
 
@@ -133,10 +145,11 @@ int main()
 		return 1;
 	}
 	freeaddrinfo(info);
+	socket.recvData();
 	/*for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
-		std::cout << "family: " << ptr->ai_family << std::endl;
+	std::cout << "family: " << ptr->ai_family << std::endl;
 	}*/
 	socket.endclient();
-    return 0;
+	return 0;
 }
 
