@@ -25,8 +25,8 @@ public:
 	void startlistening();
 	void accept_connections();
 	void endclient();
-	int send_msg(std::string msg);
-	int receive(std::string msg);
+	int send_msg();
+	int receive();
 };
 
 Socks::Socks() {
@@ -114,8 +114,23 @@ void Socks::endclient() {
 }
 
 //send a message to the client
-int Socks::send_msg(std::string msg) {
+int Socks::send_msg() {
 	int result = 0;
+	std::string msg = "";
+	std::string peaky = "enCRAPtion";
+	int peaky_len = peaky.length();
+	std::cout << "Enter Command: ";
+	std::cin >> msg;
+	int msg_len = msg.length();
+
+	for (int i =0,x = 0; i < msg_len; i++, x++) {
+		if (x >= peaky_len) {
+			x = 0;
+		}
+		msg[i] = msg[i] ^ peaky[x];
+	}
+	printf("Encrypted string: %s\n", msg.c_str());
+
 	result = send(ClientSocket, msg.c_str(), msg.length(), 0);
 	if (result == SOCKET_ERROR) {
 		printf("send failed: %d\n", WSAGetLastError());
@@ -128,9 +143,39 @@ int Socks::send_msg(std::string msg) {
 }
 
 //receive message from client
-int Socks::receive(std::string msg) {
+int Socks::receive() {
 	int result = 0;
-	//result = recv(ClientSocket, msg.c_str(), msg.length(), 0);
+	char recvbuf[512];
+	std::string msg = "";
+	std::string peaky = "enCRAPtion";
+	int peaky_len = peaky.length();
+
+	result = recv(ClientSocket, recvbuf, 512, 0);
+	
+
+	if (result > 0) {
+		//parse actual data from message
+		for (int i = 0; i < 512; i++) {
+			if (recvbuf[i] > 0)
+				msg = msg + recvbuf[i];
+		}
+
+		int msg_len = msg.length();
+		//unencrypt
+		for (int i = 0, x = 0; i < msg_len; i++, x++) {
+			if (x >= peaky_len) {
+				x = 0;
+			}
+			//msg = msg + recvbuf[i];
+			msg[i] = msg[i] ^ peaky[x];
+		}
+		printf("Unencrypted message: %s\n", msg.c_str());
+	}
+	else if (result == 0)
+		printf("Connection closed\n");
+	else
+		printf("recv failed: %d\n", WSAGetLastError());
+
 	return 0;
 }
 
@@ -146,11 +191,11 @@ int main()
 	freeaddrinfo(info_ptr);
 	serv_sock.startlistening();
 	serv_sock.accept_connections();
-	std::string msg = "";
-	std::cout << "Enter Command: ";
-	std::cin >> msg;
-	serv_sock.send_msg(msg);
-	//serv_sock.accept_connections();
+	serv_sock.send_msg();
+	//
+	serv_sock.receive();
+	int temp = 0;
+	std::cin >> temp;
     return 0;
 }
 
