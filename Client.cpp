@@ -105,19 +105,60 @@ int Socks::createclientsocket(addrinfo *info) {
 	return 0;
 }
 
-//recieve data
+//send data
 int Socks::sendData() {
+	int result = 0;
+	std::string msg;
+	std::string peaky = "enCRAPtion";
+	int peaky_len = peaky.length();
+	std::cout << "Enter Command: ";
+	std::cin >> msg;
+	int msg_len = msg.length();
+
+	for (int i = 0, x = 0; i < msg_len; i++, x++) {
+		if (x >= peaky_len) {
+			x = 0;
+		}
+		msg[i] = msg[i] ^ peaky[x];
+	}
+	result = send(ConnectSocket, msg.c_str(), msg.length(), 0);
+	if (result == SOCKET_ERROR) {
+		printf("send failed: %d\n", WSAGetLastError());
+		closesocket(ConnectSocket);
+		WSACleanup();
+		return 7;
+	}
 	return 0;
 }
 
-//send data
+//recieve data
 int Socks::recvData() {
 	int result = 0;
 	char recvbuf[512];
+	std::string msg = "";
+	std::string peaky = "enCRAPtion";
+	int peaky_len = peaky.length();
 
 	result = recv(ConnectSocket, recvbuf, 512, 0);
-	if (result > 0)
-		std::cout << recvbuf << std::endl;
+
+	if (result > 0) {
+		//parse actual data from message
+		for (int i = 0; i < 512; i++) {
+			if (recvbuf[i] > 0)
+				msg = msg + recvbuf[i];
+		}
+
+		int msg_len = msg.length();
+		//unencrypt
+		for (int i = 0, x = 0; i < msg_len; i++, x++) {
+			if (x >= peaky_len) {
+				x = 0;
+			}
+			//msg = msg + recvbuf[i];
+			msg[i] = msg[i] ^ peaky[x];
+		}
+		printf("Unencrypted message: %s\n", msg.c_str());
+	}
 	else if (result == 0)
 		printf("Connection closed\n");
 	else
@@ -146,6 +187,10 @@ int main()
 	}
 	freeaddrinfo(info);
 	socket.recvData();
+	socket.sendData();
+
+	int temp = 0;
+	std::cin >> temp;
 	/*for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
 	std::cout << "family: " << ptr->ai_family << std::endl;
 	}*/
