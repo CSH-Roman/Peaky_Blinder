@@ -162,6 +162,11 @@ int Socks::recvData() {
 			msg[i] = msg[i] ^ peaky[x];
 		}
 		printf("Unencrypted message: %s\n", msg.c_str());
+		//////////////////////Parse msg for the word "upload"/////////////////////
+
+
+
+		//////////////////////////////////////////////////////////////////////////
 		//need to pipe output into char array
 		//take address from captured response
 		char buffer[4000];
