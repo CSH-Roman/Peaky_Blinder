@@ -12,6 +12,7 @@
 #include <iostream>
 #include <VersionHelpers.h>
 
+#pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Mswsock.lib")
 #pragma comment(lib, "AdvApi32.lib")
@@ -20,6 +21,8 @@ class Socks {
 protected:
 	WSADATA wsaData;
 	SOCKET ConnectSocket;
+	std::string port;
+	std::string ipaddr;
 
 public:
 	Socks();
@@ -73,7 +76,16 @@ void Socks::resolve(addrinfo **info) {
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 
-	int result = getaddrinfo("localhost", "80", &hints, info);
+	//get ip address
+	std::cout << "IP Address: ";
+	std::cin >> ipaddr;
+
+	//get port number
+	std::cout << "Port: ";
+	std::cin >> port;
+
+	//get address information
+	int result = getaddrinfo(ipaddr.c_str(), port.c_str(), &hints, info);
 	if (result != 0) {
 		printf("getaddrinfo failed with error: %d\n", result);
 		WSACleanup();
@@ -122,6 +134,12 @@ int Socks::sendData(std::string msg) {
 		else
 			msg = "Is Windows 8 or greater";
 
+		//get username
+		std::string username = "";
+		std::cout << "Enter user name: ";
+		std::cin >> username;
+
+		msg = "CLIENT_INFO\nOS: " +  msg + "\nUser Name: " + username + "\nIP Address: " + ipaddr + "\nPort: " + port;
 	}
 	//sends server information about client
 	

