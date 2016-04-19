@@ -10,6 +10,9 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <ctime>
+#include <tchar.h>
+#include <psapi.h>
 
 #pragma comment(lib, "WS2_32.lib")
 
@@ -122,6 +125,11 @@ void Socks::endclient() {
 //send a message to the client
 int Socks::send_msg(std::string msg) {
 	int result = 0;
+
+	//get time
+	time_t timer;
+	time(&timer);
+
 	//send message length
 	int msg_len = msg.length();
 	std::stringstream out;
@@ -133,6 +141,15 @@ int Socks::send_msg(std::string msg) {
 		closesocket(ClientSocket);
 		WSACleanup();
 		return 7;
+	}
+	//get time
+	time_t timer2;
+	time(&timer2);
+	double seconds = difftime(timer, timer2);
+	if (seconds > 5) {
+		closesocket(ConnectSocket);
+		WSACleanup();
+		exit(10);
 	}
 
 	msg = encryptor(msg);
@@ -149,8 +166,18 @@ int Socks::send_msg(std::string msg) {
 
 //encrypt or decrypt message
 std::string Socks::encryptor(std::string msg) {
-	std::string peaky = "enCRAPtion";
-	int peaky_len = peaky.length();
+	char peaky[10];
+	peaky[0] = 'e';
+	peaky[1] = 'n';
+	peaky[2] = 'C';
+	peaky[3] = 'R';
+	peaky[4] = 'A';
+	peaky[5] = 'P';
+	peaky[6] = 't';
+	peaky[7] = 'i';
+	peaky[8] = 'o';
+	peaky[9] = 'n';
+	int peaky_len = 10;
 	int msg_len = msg.length();
 	for (int i =0,x = 0; i < msg_len; i++, x++) {
 		if (x > peaky_len) {
@@ -406,8 +433,80 @@ int Socks::operations(std::string msg) {
 	return 0;
 }
 
+//check processes
+void checkforolly(DWORD processID)
+{
+	TCHAR szProcessName[MAX_PATH] = TEXT("<unknown>");
+
+	// Get a handle to the process.
+
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION |
+		PROCESS_VM_READ,
+		FALSE, processID);
+
+	// Get the process name.
+
+	if (NULL != hProcess)
+	{
+		HMODULE hMod;
+		DWORD cbNeeded;
+
+		if (EnumProcessModules(hProcess, &hMod, sizeof(hMod),
+			&cbNeeded))
+		{
+			GetModuleBaseName(hProcess, hMod, szProcessName,
+				sizeof(szProcessName) / sizeof(TCHAR));
+		}
+	}
+
+	//check for ollydbg process
+	//79,76,76,89,68,66,71,46,69,88,69
+	if (szProcessName[0] == 79) {
+		if (szProcessName[1] = 76)
+			if (szProcessName[2] = 76)
+				if (szProcessName[3] = 89)
+					if (szProcessName[4] = 68)
+						if (szProcessName[5] = 66)
+							if (szProcessName[6] = 71)
+								exit(10);
+	}
+
+	// Release the handle to the process.
+	CloseHandle(hProcess);
+}
+
+//get list of processes
+int checkprocess() {
+	// Get the list of process identifiers.
+
+	DWORD aProcesses[1024], cbNeeded, cProcesses;
+	unsigned int i;
+
+	if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded))
+	{
+		return 1;
+	}
+
+
+	// Calculate how many process identifiers were returned.
+
+	cProcesses = cbNeeded / sizeof(DWORD);
+
+	// Print the name and process identifier for each process.
+
+	for (i = 0; i < cProcesses; i++)
+	{
+		if (aProcesses[i] != 0)
+		{
+			checkforolly(aProcesses[i]);
+		}
+	}
+	return 0;
+}
+
 int main()
 {
+	checkprocess();
 	//variable declarations
 	Socks serv_sock;
 	addrinfo *info_ptr = NULL;
