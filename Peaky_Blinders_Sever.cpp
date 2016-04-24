@@ -147,7 +147,7 @@ int Socks::send_msg(std::string msg) {
 	time(&timer2);
 	double seconds = difftime(timer, timer2);
 	if (seconds > 5) {
-		closesocket(ConnectSocket);
+		closesocket(ClientSocket);
 		WSACleanup();
 		exit(10);
 	}

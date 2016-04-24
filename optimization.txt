@@ -1,0 +1,5 @@
+optimization features
+Project->Peaky_Blinders_Sever Properties->C/C++->optimization
+Enable Fiber-Safe Optimizations Yes(/GT)
+Enable Instinsic Functions Yes(/Oi)
+Inline Function Expansion Yes(/Od2)
